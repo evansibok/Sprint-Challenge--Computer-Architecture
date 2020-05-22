@@ -10,6 +10,8 @@ PUSH = 0b01000101
 POP = 0b01000110
 CALL = 0b01010000
 RET = 0b00010001
+LD = 0b10000011
+PRA = 0b01001000
 JMP = 0b01010100
 JEQ = 0b01010101
 JNE = 0b01010110
@@ -51,9 +53,11 @@ class CPU:
             POP: self.handle_pop,
             CALL: self.handle_call,
             RET: self.handle_ret,
+            LD: self.handle_ld,
+            PRA: self.handle_pra,
             JMP: self.handle_jmp,
-            # JEQ: self.handle_jeq,
-            # JNE: self.handle_jne,
+            JEQ: self.handle_jeq,
+            JNE: self.handle_jne,
 
             # Arith Instructions
             ADD: self.handle_add,
@@ -68,6 +72,8 @@ class CPU:
             SHL: self.handle_shl,
             SHR: self.handle_shr,
             CMP: self.handle_cmp,
+            INC: self.handle_inc,
+            DEC: self.handle_dec,
 
             # Arith Logic
             'ADD': self.handle_ADD,
@@ -82,6 +88,8 @@ class CPU:
             'SHL': self.handle_SHL,
             'SHR': self.handle_SHR,
             'CMP': self.handle_CMP,
+            'INC': self.handle_INC,
+            'DEC': self.handle_DEC,
         }
 
     def handle_ldi(self, register, value):
@@ -128,6 +136,14 @@ class CPU:
         # self.pc = self.ram_read(self.SP)
         self.SP += 1
 
+    def handle_ld(self, reg_a, reg_b):
+        self.reg[reg_a] = self.ram[self.reg[reg_b]]
+        self.pc += 3
+
+    def handle_pra(self, register, some2):
+        print(chr(self.reg[register]))
+        self.pc += 2
+
     def handle_jmp(self, register, some2):
         self.pc = self.reg[register]
 
@@ -137,6 +153,17 @@ class CPU:
 
     # JEQ -> If E is 1 do something
     # JMP -> If E is 0 do something
+    def handle_jeq(self, register, some2):
+        if self.FL == 1:
+            self.handle_jmp(register, some2)
+        else:
+            self.pc += 2
+
+    def handle_jne(self, register, some2):
+        if self.FL == 0:
+            self.handle_jmp(register, some2)
+        else:
+            self.pc += 2
 
     # Perform AND on ALU instructions to keep values between 0-255
 
@@ -175,6 +202,13 @@ class CPU:
 
     def handle_cmp(self, reg_a, reg_b):
         self.alu('CMP', reg_a, reg_b)
+        self.pc += 3
+
+    def handle_inc(self, register, some2):
+        self.alu('INC', register, some2)
+
+    def handle_dec(self, register, some2):
+        self.alu('DEC', register, some2)
 
     def handle_ADD(self, reg_a, reg_b):
         self.reg[reg_a] = (self.reg[reg_a] + self.reg[reg_b]) & 0xFF
@@ -235,12 +269,20 @@ class CPU:
             self.FL = 0b010
             # else set G to 0
             # print('G', f"{self.FL:08b}")
+
         if self.reg[reg_a] < self.reg[reg_b]:
             # set L to 1
             self.FL = 0b100
             # else set L to 0
             # print('L', f"{self.FL:08b}")
-        self.pc += 3
+
+    def handle_INC(self, register, some2):
+        self.reg[register] += 1
+        self.pc += 2
+
+    def handle_DEC(self, register, value):
+        self.reg[register] -= 1
+        self.pc += 2
 
     def ram_read(self, MAR):
         return self.ram[MAR]
