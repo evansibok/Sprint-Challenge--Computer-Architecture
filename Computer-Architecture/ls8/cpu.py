@@ -10,6 +10,9 @@ PUSH = 0b01000101
 POP = 0b01000110
 CALL = 0b01010000
 RET = 0b00010001
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 # Arithmetic Operations
 ADD = 0b10100000
 SUB = 0b10100001
@@ -48,6 +51,9 @@ class CPU:
             POP: self.handle_pop,
             CALL: self.handle_call,
             RET: self.handle_ret,
+            JMP: self.handle_jmp,
+            # JEQ: self.handle_jeq,
+            # JNE: self.handle_jne,
 
             # Arith Instructions
             ADD: self.handle_add,
@@ -87,7 +93,6 @@ class CPU:
         self.pc += 2
 
     def handle_hlt(self, some1, some2):
-        self.running = False
         sys.exit(-1)
 
     def handle_push(self, register, some2):
@@ -122,6 +127,16 @@ class CPU:
         # The code below also works to read from ram
         # self.pc = self.ram_read(self.SP)
         self.SP += 1
+
+    def handle_jmp(self, register, some2):
+        self.pc = self.reg[register]
+
+    # L = 0b100 -> (0b100 & 0b100) = 1
+    # G = 0b010 -> (0b010 & 0b010) = 1
+    # E = 0b001 -> (0b001 & 0b001) = 1
+
+    # JEQ -> If E is 1 do something
+    # JMP -> If E is 0 do something
 
     # Perform AND on ALU instructions to keep values between 0-255
 
@@ -213,19 +228,18 @@ class CPU:
             # set E to 1
             self.FL = 0b001
             # else set E to 0
-            print('E', f"{self.FL:08b}")
+            # print('E', f"{self.FL:08b}")
 
         if self.reg[reg_a] > self.reg[reg_b]:
             # set G to 1
             self.FL = 0b010
             # else set G to 0
-            print('G', f"{self.FL:08b}")
-
+            # print('G', f"{self.FL:08b}")
         if self.reg[reg_a] < self.reg[reg_b]:
             # set L to 1
             self.FL = 0b100
             # else set L to 0
-            print('L', f"{self.FL:08b}")
+            # print('L', f"{self.FL:08b}")
         self.pc += 3
 
     def ram_read(self, MAR):
