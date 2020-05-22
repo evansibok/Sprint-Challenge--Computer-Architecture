@@ -147,23 +147,45 @@ class CPU:
     def handle_jmp(self, register, some2):
         self.pc = self.reg[register]
 
-    # L = 0b100 -> (0b100 & 0b100) = 1
-    # G = 0b010 -> (0b010 & 0b010) = 1
+    # L = 0b100 -> (0b100 & 0b100) = 4
+    # G = 0b010 -> (0b010 & 0b010) = 2
     # E = 0b001 -> (0b001 & 0b001) = 1
+
+    # lge -> 000
+    # 100
+    # 010
+    # 001
+
+    # 1101
+    # 1000 ->
+    # ----
+    # 1000
 
     # JEQ -> If E is 1 do something
     # JMP -> If E is 0 do something
     def handle_jeq(self, register, some2):
-        if self.FL == 1:
+        if (self.FL & 0b001) == 1:
             self.handle_jmp(register, some2)
         else:
             self.pc += 2
 
     def handle_jne(self, register, some2):
-        if self.FL == 0:
+        if (self.FL & 0b001) == 0:
             self.handle_jmp(register, some2)
         else:
             self.pc += 2
+
+    # # G -> 0b010
+    # 010
+    # 001 -> G
+    # ---
+    # 000
+
+    # A | B -> AND
+    # 1   0 -> 0
+    # 0   1 -> 0
+    # 1   1 -> 1
+    # 0   0 -> 0
 
     # Perform AND on ALU instructions to keep values between 0-255
 
@@ -202,7 +224,6 @@ class CPU:
 
     def handle_cmp(self, reg_a, reg_b):
         self.alu('CMP', reg_a, reg_b)
-        self.pc += 3
 
     def handle_inc(self, register, some2):
         self.alu('INC', register, some2)
@@ -275,6 +296,7 @@ class CPU:
             self.FL = 0b100
             # else set L to 0
             # print('L', f"{self.FL:08b}")
+        self.pc += 3
 
     def handle_INC(self, register, some2):
         self.reg[register] += 1
