@@ -38,7 +38,7 @@ class CPU:
         self.SP = 7
         self.ram[self.SP] = 0xF4
         self.running = True
-        # self.FL = 0 # FL bits: 00000LGE
+        self.FL = 0b000  # FL bits: 00000LGE
         self.dt = {
             # System Instructions
             LDI: self.handle_ldi,
@@ -61,6 +61,7 @@ class CPU:
             MOD: self.handle_mod,
             SHL: self.handle_shl,
             SHR: self.handle_shr,
+            CMP: self.handle_cmp,
 
             # Arith Logic
             'ADD': self.handle_ADD,
@@ -74,6 +75,7 @@ class CPU:
             'MOD': self.handle_MOD,
             'SHL': self.handle_SHL,
             'SHR': self.handle_SHR,
+            'CMP': self.handle_CMP,
         }
 
     def handle_ldi(self, register, value):
@@ -87,6 +89,39 @@ class CPU:
     def handle_hlt(self, some1, some2):
         self.running = False
         sys.exit(-1)
+
+    def handle_push(self, register, some2):
+        self.SP -= 1
+        self.ram[self.SP] = self.reg[register]
+        self.pc += 2
+
+    def handle_pop(self, register, some2):
+        self.reg[register] = self.ram[self.SP]
+        self.SP += 1
+        self.pc += 2
+
+    def handle_call(self, register, some2):
+        """
+        Handles a subroutine CALL.
+        Push the address of the instruction directly after the CALL to the stack. This allows us to return to where we left off when the subroutine finiseses executing.
+        """
+        self.SP -= 1
+        self.ram[self.SP] = self.pc + 2
+        # The code below also works after
+        # the SP has been decremented by 1
+        # self.ram_write(self.SP, self.pc + 2)
+
+        # Set the pc to the address stored in the given register
+        self.pc = self.reg[register]
+
+    def handle_ret(self, some1, some2):
+        """
+        Read from RAM, pop the value from the top (the current SP) of the stack and store in the program counter
+        """
+        self.pc = self.ram[self.SP]
+        # The code below also works to read from ram
+        # self.pc = self.ram_read(self.SP)
+        self.SP += 1
 
     # Perform AND on ALU instructions to keep values between 0-255
 
@@ -122,6 +157,9 @@ class CPU:
 
     def handle_shr(self, reg_a, reg_b):
         self.alu('SHR', reg_a, reg_b)
+
+    def handle_cmp(self, reg_a, reg_b):
+        self.alu('CMP', reg_a, reg_b)
 
     def handle_ADD(self, reg_a, reg_b):
         self.reg[reg_a] = (self.reg[reg_a] + self.reg[reg_b]) & 0xFF
@@ -167,38 +205,28 @@ class CPU:
         self.reg[reg_a] = (self.reg[reg_a] >> self.reg[reg_b]) & 0xFF
         self.pc += 3
 
-    def handle_push(self, register, some2):
-        self.SP -= 1
-        self.ram[self.SP] = self.reg[register]
-        self.pc += 2
-
-    def handle_pop(self, register, some2):
-        self.reg[register] = self.ram[self.SP]
-        self.SP += 1
-        self.pc += 2
-
-    def handle_call(self, register, some2):
+    def handle_CMP(self, reg_a, reg_b):
         """
-        Handles a subroutine CALL.
-        Push the address of the instruction directly after the CALL to the stack. This allows us to return to where we left off when the subroutine finiseses executing.
+        Compares values in the registers and sets the Flags accordingly.
         """
-        self.SP -= 1
-        self.ram[self.SP] = self.pc + 2
-        # The code below also works after
-        # the SP has been decremented by 1
-        # self.ram_write(self.SP, self.pc + 2)
+        if self.reg[reg_a] == self.reg[reg_b]:
+            # set E to 1
+            self.FL = 0b001
+            # else set E to 0
+            print('E', f"{self.FL:08b}")
 
-        # Set the pc to the address stored in the given register
-        self.pc = self.reg[register]
+        if self.reg[reg_a] > self.reg[reg_b]:
+            # set G to 1
+            self.FL = 0b010
+            # else set G to 0
+            print('G', f"{self.FL:08b}")
 
-    def handle_ret(self, some1, some2):
-        """
-        Read from RAM, pop the value from the top (the current SP) of the stack and store in the program counter
-        """
-        self.pc = self.ram[self.SP]
-        # The code below also works to read from ram
-        # self.pc = self.ram_read(self.SP)
-        self.SP += 1
+        if self.reg[reg_a] < self.reg[reg_b]:
+            # set L to 1
+            self.FL = 0b100
+            # else set L to 0
+            print('L', f"{self.FL:08b}")
+        self.pc += 3
 
     def ram_read(self, MAR):
         return self.ram[MAR]
